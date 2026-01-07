@@ -201,7 +201,63 @@ def cmd_evaluate(args):
     print(f"Multi-model evaluations saved to {output_file}")
 
 
+def cmd_wfa(args):
+    """Run Walk-Forward Analysis."""
+    from analysis.walk_forward import WalkForwardAnalyzer, generate_adaptive_windows
+    from pathlib import Path
+    
+    print(f"Running Walk-Forward Analysis on {args.pair}...")
+    
+    # Generate adaptive windows based on available data
+    # Using 3-year train, 1-year test, stepping 2 years
+    windows = generate_adaptive_windows(
+        start_year=2010, 
+        end_year=2024, 
+        train_years=3, 
+        test_years=1, 
+        step_years=2
+    )
+    
+    print(f"Generated {len(windows)} walk-forward windows:")
+    for w in windows:
+        print(f"  Train: {w['train'][0]}-{w['train'][1]} → Test: {w['test'][0]}-{w['test'][1]}")
+    
+    analyzer = WalkForwardAnalyzer(Path("data/parquet"), windows)
+    
+    # Import strategies to test
+    from strategies.pattern_based.candlestick import Strategy as CandlestickStrategy
+    from strategies.trend_following.breakout import Strategy as BreakoutStrategy
+    from strategies.mean_reversion.bollinger_bands import Strategy as BollingerStrategy
+    
+    configs = [
+        {"strategy_class": CandlestickStrategy, "params": {"patterns": ["doji", "engulfing"]}},
+        {"strategy_class": BreakoutStrategy, "params": {"period": 20, "atr_multiplier": 2.0}},
+        {"strategy_class": BollingerStrategy, "params": {"period": 20, "std_dev": 2.0}},
+    ]
+    
+    print(f"\nAnalyzing {len(configs)} strategy configurations...")
+    results = analyzer.run_full_sweep(configs, args.pair)
+    
+    # Save results
+    output_path = Path(args.output)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    analyzer.save_results(results, output_path)
+    
+    # Print summary
+    print(f"\n{'='*60}")
+    print("WALK-FORWARD ANALYSIS SUMMARY")
+    print(f"{'='*60}")
+    
+    robust = [r for r in results if r.is_robust]
+    print(f"Robust strategies (100% positive windows): {len(robust)}/{len(results)}")
+    
+    for r in sorted(results, key=lambda x: x.avg_test_sharpe, reverse=True):
+        status = "✅ ROBUST" if r.is_robust else f"⚠️ {r.consistency_ratio:.0%}"
+        print(f"  {r.strategy_name}: Avg Sharpe={r.avg_test_sharpe:.2f} {status}")
+
+
 def main():
+
     parser = argparse.ArgumentParser(
         description="Forex Backtester - High-performance strategy testing",
         formatter_class=argparse.RawDescriptionHelpFormatter
@@ -231,7 +287,14 @@ def main():
     ev.add_argument("--input", default="results/", help="Results directory with sweep_summary.json")
     ev.add_argument("--top", type=int, default=5, help="Number of top strategies to evaluate")
     
+    # Walk-Forward Analysis command
+    wf = subparsers.add_parser("wfa", help="Run Walk-Forward Analysis")
+    wf.add_argument("--pair", default="XAUUSD", help="Currency pair")
+    wf.add_argument("--strategy", default="all", help="Strategy to test (or 'all')")
+    wf.add_argument("--output", default="results/wfa_results.json", help="Output file")
+    
     args = parser.parse_args()
+
     
     if args.command == "download":
         cmd_download(args)
@@ -241,6 +304,8 @@ def main():
         cmd_sweep(args)
     elif args.command == "evaluate":
         cmd_evaluate(args)
+    elif args.command == "wfa":
+        cmd_wfa(args)
     else:
         parser.print_help()
 
