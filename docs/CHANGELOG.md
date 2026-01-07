@@ -16,6 +16,20 @@ All notable changes to forex-backtester will be documented in this file.
   - Pattern Based: Candlestick, Price Action, Harmonic
   - Hybrid: Multi-Timeframe, Regime Switching, Ensemble
 
+## [2026-01-08] - Transaction Cost Model
+### Added
+- **Realistic Transaction Costs**: `engine/transaction_costs.py` with spread, commission, slippage modeling
+  - Presets for EURUSD (0.5 pip), XAUUSD (2.5 pip), GBPUSD (0.8 pip)
+- **Centralized Metrics**: `strategies/base.py` with `calculate_metrics_with_costs()` used by all 17 strategies
+- Cost breakdown in metrics: spread_cost_pips, commission_usd, cost_per_trade_pips
+
+### Impact
+- High-frequency strategies: 50-80% Sharpe reduction (expected behavior)
+- Low-frequency strategies: 10-30% reduction
+
+### Reference
+- Session: c1beaca0-2557-42ac-bbd6-ca6a5e60e5dc
+
 ## [2026-01-08] - Strategy Library 20/20 Complete
 ### Added
 - **Price Action Strategy Enhanced**: Proper Pin Bar/Inside Bar detection with body/wick ratio thresholds, lookahead fix (removed `shift(-1)`), confirmation mechanism for breakouts, full 8-metric calculation with **transaction costs integration**.

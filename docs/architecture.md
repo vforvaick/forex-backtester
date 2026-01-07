@@ -53,6 +53,7 @@ graph TB
 | Engine | HftBacktest (Rust + Python) | Tick-level backtesting |
 | Data | Polars + Parquet | Memory-efficient data handling |
 | Metrics | QuantStats + VectorBT | Performance analysis |
+| **Costs** | **transaction_costs.py** | **Spread, commission, slippage modeling** |
 | Parallelization | joblib | Distributed execution |
 | Journal | SQLite | Result tracking & LLM memory |
 | LLM | CLIProxy (Claude/GPT/Gemini) | Strategy evaluation |
