@@ -12,7 +12,7 @@
 - [x] Build parallel strategy runner (100% success on OCI)
 
 ## Phase 3: Validation Pipeline (Week 5-6)
-- [ ] Walk-Forward Analysis framework
+- [x] Walk-Forward Analysis framework (Implemented)
 - [ ] Monte Carlo simulation
 - [x] Result aggregation & ranking (Parquet sweep summary)
 

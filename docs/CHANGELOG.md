@@ -23,6 +23,7 @@ All notable changes to forex-backtester will be documented in this file.
 - **CLIProxy Multi-Model Evaluation**: Integrated `gemini-claude-opus-4-5-thinking`, `gemini-3-pro-preview`, and `gpt-5.2` for strategy analysis.
 - **Self-Contained Strategies**: Refactored `_generate_signals` for all 17 strategies to ensure parallel execution compatibility with automatic indicator calculation.
 - **Automated XAUUSD Download**: Background script `download_xauusd.py` for full historical (2010-2024) tick data acquisition.
+- **Walk-Forward Analysis Framework**: Rolling window validation with adaptive window generation (3yr train / 1yr test / 2yr step). Detects overfitting by testing on out-of-sample data.
 
 ### Fixed
 - Patched `duka` library URL from `www.dukascopy.com` to `datafeed.dukascopy.com` to bypass 301 redirects.
