@@ -20,7 +20,7 @@ The Forex Backtester is designed to handle massive-scale strategy sweeps across 
 forex-backtester/
 ├── docs/              # Essential Documentation (Architecture, Changelog, Roadmap)
 ├── data/              # Historical Tick Data (Parquet format)
-├── strategies/        # 17+ Strategy implementations (Trend, Reversion, Volatility)
+├── strategies/        # 20 base strategy implementations (Trend, Reversion, Volatility)
 ├── engine/            # Core backtesting & parallel runner logic
 ├── journal/           # Result tracking and LLM context management
 ├── llm/               # CLIProxy integration for strategy evaluation
