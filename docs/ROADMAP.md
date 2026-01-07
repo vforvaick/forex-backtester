@@ -7,13 +7,13 @@
 - [x] Test HftBacktest with sample data
 
 ## Phase 2: Strategy Library (Week 3-4)
-- [x] Implement 20 base strategies (17/20 complete)
+- [x] Implement 20 base strategies (20/20 complete)
 - [x] Create tuning parameter grid (5 variants each)
 - [x] Build parallel strategy runner (100% success on OCI)
 
 ## Phase 3: Validation Pipeline (Week 5-6)
 - [x] Walk-Forward Analysis framework (Implemented)
-- [ ] Monte Carlo simulation
+- [x] Monte Carlo simulation (1,000 permutations, p-value, ruin probability)
 - [x] Result aggregation & ranking (Parquet sweep summary)
 
 ## Phase 4: LLM Integration (Week 7-8)

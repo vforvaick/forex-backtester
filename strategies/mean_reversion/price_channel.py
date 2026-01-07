@@ -71,18 +71,11 @@ class Strategy:
         ).alias("signal")
     
     def _calculate_metrics(self, data: pl.DataFrame, signals: pl.Series) -> Dict[str, float]:
-        """Calculate metrics."""
-        data = data.with_columns(signals)
-        returns = data.select([
-            (pl.col("mid").pct_change() * pl.col("signal").shift(1)).alias("r")
-        ])["r"].drop_nulls()
+        """Calculate metrics with transaction costs."""
+        from strategies.base import calculate_metrics_with_costs
         
-        if len(returns) == 0:
-            return {"sharpe": 0, "sortino": 0, "max_drawdown": 0, "win_rate": 0,
-                    "profit_factor": 0, "total_trades": 0, "total_return": 0, "calmar": 0}
+        if isinstance(signals, pl.Expr):
+            signals = data.select(signals).to_series()
         
-        ann = (252 * 24 * 60) ** 0.5
-        sharpe = (returns.mean() / returns.std() * ann) if returns.std() > 0 else 0
-        
-        return {"sharpe": sharpe, "sortino": 0, "max_drawdown": 0, "win_rate": 0,
-                "profit_factor": 0, "total_trades": 0, "total_return": returns.sum(), "calmar": 0}
+        return calculate_metrics_with_costs(data, signals, symbol="EURUSD")
+

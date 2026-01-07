@@ -26,13 +26,22 @@ class ForexConfig:
     symbol: str
     tick_size: float = 0.00001  # 1 pip for 5-digit pairs
     lot_size: float = 100000   # Standard lot
-    spread_pips: float = 1.0   # Typical spread in pips
+    
+    # Transaction costs (CRITICAL for realistic metrics)
+    spread_pips: float = 0.5   # Half-spread in pips (typical EURUSD)
     commission_per_lot: float = 7.0  # USD per round-trip lot
+    slippage_pips: float = 0.1  # Execution slippage
+    
     leverage: int = 100
     
     # Latency modeling
     feed_latency_ms: float = 1.0
     order_latency_ms: float = 5.0
+    
+    @property
+    def total_cost_pips(self) -> float:
+        """Total round-trip cost in pips."""
+        return (self.spread_pips * 2) + self.slippage_pips
 
 
 class Backtester:

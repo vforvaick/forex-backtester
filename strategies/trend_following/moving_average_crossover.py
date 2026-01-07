@@ -83,75 +83,28 @@ class Strategy:
         ).alias("signal")
     
     def _calculate_metrics(self, data: pl.DataFrame, signals: pl.Series) -> Dict[str, float]:
-        """Calculate performance metrics."""
-        # Add signals to data
-        data = data.with_columns(signals)
+        """Calculate performance metrics with transaction costs."""
+        from strategies.base import calculate_metrics_with_costs
         
-        # Calculate returns
-        returns = data.select([
-            (pl.col("mid").pct_change() * pl.col("signal").shift(1)).alias("strategy_return")
-        ])["strategy_return"]
+        # Evaluate signal expression to Series if needed
+        if isinstance(signals, pl.Expr):
+            signals = data.select(signals).to_series()
         
-        # Remove nulls
-        returns = returns.drop_nulls()
+        # Use centralized cost-aware metrics calculation
+        metrics = calculate_metrics_with_costs(data, signals, symbol="EURUSD")
         
-        if len(returns) == 0:
-            return {
-                "sharpe": 0, "sortino": 0, "max_drawdown": 0,
-                "win_rate": 0, "profit_factor": 0, "total_trades": 0,
-                "total_return": 0, "calmar": 0
-            }
-        
-        # Basic metrics
-        total_return = returns.sum()
-        mean_ret = returns.mean()
-        std_ret = returns.std()
-        
-        # Annualization factor (assuming minute data)
-        ann_factor = (252 * 24 * 60) ** 0.5
-        
-        sharpe = (mean_ret / std_ret * ann_factor) if std_ret > 0 else 0
-        
-        # Sortino
-        downside = returns.filter(returns < 0)
-        downside_std = downside.std() if len(downside) > 0 else std_ret
-        sortino = (mean_ret / downside_std * ann_factor) if downside_std > 0 else 0
-        
-        # Max drawdown
-        cum_returns = (1 + returns).cum_prod()
-        running_max = cum_returns.cum_max()
-        drawdown = (cum_returns - running_max) / running_max
-        max_dd = drawdown.min()
-        
-        # Calmar
-        calmar = (total_return / abs(max_dd)) if max_dd != 0 else 0
-        
-        # Win rate
-        wins = returns.filter(returns > 0)
-        win_rate = len(wins) / len(returns) if len(returns) > 0 else 0
-        
-        # Profit factor
-        gross_profit = wins.sum() if len(wins) > 0 else 0
-        losses = returns.filter(returns < 0)
-        gross_loss = abs(losses.sum()) if len(losses) > 0 else 1
-        profit_factor = gross_profit / gross_loss if gross_loss > 0 else 0
-        
-        # Trade count (signal changes)
-        signal_changes = data["signal"].diff().abs().sum()
-        
-        return {
-            "sharpe": sharpe,
-            "sortino": sortino,
-            "max_drawdown": max_dd,
-            "win_rate": win_rate,
-            "profit_factor": profit_factor,
-            "total_trades": int(signal_changes / 2),  # Round trips
-            "total_return": total_return,
-            "calmar": calmar
+        # Add strategy params
+        metrics["params"] = {
+            "fast_period": self.fast_period,
+            "slow_period": self.slow_period,
+            "signal_type": self.signal_type
         }
+        
+        return metrics
 
 
 # For module-level access
 def create_strategy(**params) -> Strategy:
     """Factory function to create strategy with params."""
     return Strategy(**params)
+

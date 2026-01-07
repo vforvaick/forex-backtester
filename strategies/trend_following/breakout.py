@@ -68,33 +68,11 @@ class Strategy:
         ).alias("signal")
     
     def _calculate_metrics(self, data: pl.DataFrame, signals: pl.Series) -> Dict[str, float]:
-        """Calculate performance metrics."""
-        data = data.with_columns(signals)
-        returns = data.select([
-            (pl.col("mid").pct_change() * pl.col("signal").shift(1)).alias("strategy_return")
-        ])["strategy_return"].drop_nulls()
+        """Calculate performance metrics with transaction costs."""
+        from strategies.base import calculate_metrics_with_costs
         
-        if len(returns) == 0:
-            return {"sharpe": 0, "sortino": 0, "max_drawdown": 0, "win_rate": 0, 
-                    "profit_factor": 0, "total_trades": 0, "total_return": 0, "calmar": 0}
+        if isinstance(signals, pl.Expr):
+            signals = data.select(signals).to_series()
         
-        ann_factor = (252 * 24 * 60) ** 0.5
-        mean_ret, std_ret = returns.mean(), returns.std()
-        sharpe = (mean_ret / std_ret * ann_factor) if std_ret > 0 else 0
-        
-        downside = returns.filter(returns < 0)
-        sortino = (mean_ret / downside.std() * ann_factor) if len(downside) > 0 and downside.std() > 0 else 0
-        
-        cum_returns = (1 + returns).cum_prod()
-        max_dd = ((cum_returns - cum_returns.cum_max()) / cum_returns.cum_max()).min()
-        
-        wins = returns.filter(returns > 0)
-        win_rate = len(wins) / len(returns)
-        profit_factor = wins.sum() / abs(returns.filter(returns < 0).sum()) if returns.filter(returns < 0).sum() != 0 else 0
-        
-        return {
-            "sharpe": sharpe, "sortino": sortino, "max_drawdown": max_dd,
-            "win_rate": win_rate, "profit_factor": profit_factor,
-            "total_trades": int(data["signal"].diff().abs().sum() / 2),
-            "total_return": returns.sum(), "calmar": returns.sum() / abs(max_dd) if max_dd != 0 else 0
-        }
+        return calculate_metrics_with_costs(data, signals, symbol="EURUSD")
+

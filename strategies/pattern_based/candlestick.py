@@ -79,62 +79,8 @@ class Strategy:
         return data.select(signal_expr).to_series()
     
     def _calculate_metrics(self, data: pl.DataFrame, signals: pl.Series) -> Dict[str, float]:
-        """Calculate metrics."""
-        data = data.with_columns(signals.alias("signal"))
-        
-        # Calculate returns based on signal
-        data = data.with_columns([
-            (pl.col("mid").pct_change() * pl.col("signal").shift(1)).alias("r"),
-            (pl.col("signal") != pl.col("signal").shift(1)).alias("trade_trigger")
-        ])
-        
-        returns = data["r"].drop_nulls()
-        
-        if len(returns) == 0 or returns.std() == 0:
-            return {"sharpe": 0, "sortino": 0, "max_drawdown": 0, "win_rate": 0,
-                    "profit_factor": 0, "total_trades": 0, "total_return": 0, "calmar": 0}
-        
-        # Count actual trades (signal changes from 0 to non-zero or sign change)
-        trade_signals = data.filter(pl.col("trade_trigger") & (pl.col("signal") != 0))
-        total_trades = len(trade_signals)
-        
-        # Calculate metrics
-        ann = (252 * 24 * 60) ** 0.5  # Annualization for tick data
-        sharpe = float(returns.mean() / returns.std() * ann)
-        
-        # Sortino (downside deviation)
-        downside = returns.filter(returns < 0)
-        sortino = float(returns.mean() / downside.std() * ann) if len(downside) > 0 and downside.std() > 0 else 0
-        
-        # Win rate
-        wins = returns.filter(returns > 0)
-        win_rate = float(len(wins) / len(returns)) if len(returns) > 0 else 0
-        
-        # Profit factor
-        gross_profit = float(returns.filter(returns > 0).sum())
-        gross_loss = abs(float(returns.filter(returns < 0).sum()))
-        profit_factor = float(gross_profit / gross_loss) if gross_loss > 0 else 0
-        
-        # Max drawdown
-        cumulative = returns.cum_sum()
-        running_max = cumulative.cum_max()
-        drawdown = running_max - cumulative
-        max_drawdown = float(drawdown.max()) if len(drawdown) > 0 else 0
-        
-        # Total return
-        total_return = float(returns.sum())
-        
-        # Calmar
-        calmar = float(total_return / max_drawdown) if max_drawdown > 0 else 0
-        
-        return {
-            "sharpe": sharpe, 
-            "sortino": sortino, 
-            "max_drawdown": max_drawdown, 
-            "win_rate": win_rate,
-            "profit_factor": profit_factor, 
-            "total_trades": total_trades, 
-            "total_return": total_return, 
-            "calmar": calmar
-        }
+        """Calculate metrics with transaction costs."""
+        from strategies.base import calculate_metrics_with_costs
+        return calculate_metrics_with_costs(data, signals, symbol="EURUSD")
+
 

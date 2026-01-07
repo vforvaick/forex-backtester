@@ -256,6 +256,48 @@ def cmd_wfa(args):
         print(f"  {r.strategy_name}: Avg Sharpe={r.avg_test_sharpe:.2f} {status}")
 
 
+def cmd_montecarlo(args):
+    """Run Monte Carlo stress test on sweep results."""
+    from analysis.monte_carlo import MonteCarloSimulator, print_mc_summary
+    from pathlib import Path
+    
+    input_file = Path(args.input) / "sweep_summary.json"
+    if not input_file.exists():
+        print(f"Sweep results not found: {input_file}")
+        return
+    
+    print(f"Running Monte Carlo simulation ({args.simulations} iterations)...")
+    print(f"Input: {input_file}")
+    print(f"Analyzing top {args.top} strategies")
+    
+    simulator = MonteCarloSimulator(
+        n_simulations=args.simulations,
+        ruin_threshold=args.ruin_threshold,
+        random_seed=args.seed
+    )
+    
+    results = simulator.analyze_sweep_results(
+        sweep_file=input_file,
+        top_n=args.top
+    )
+    
+    # Print summary
+    print_mc_summary(results)
+    
+    # Save results
+    output_file = Path(args.input) / "mc_results.json"
+    simulator.save_results(results, output_file)
+    
+    # Summary statistics
+    skill_count = sum(1 for r in results if r.is_skill_based)
+    high_ruin = sum(1 for r in results if r.probability_of_ruin > 0.30)
+    
+    print(f"\n{'='*65}")
+    print(f"SUMMARY: {skill_count}/{len(results)} strategies show statistical skill (p < 0.05)")
+    if high_ruin > 0:
+        print(f"⚠️  WARNING: {high_ruin} strategies have >30% probability of ruin")
+
+
 def main():
 
     parser = argparse.ArgumentParser(
@@ -293,6 +335,14 @@ def main():
     wf.add_argument("--strategy", default="all", help="Strategy to test (or 'all')")
     wf.add_argument("--output", default="results/wfa_results.json", help="Output file")
     
+    # Monte Carlo command
+    mc = subparsers.add_parser("montecarlo", help="Run Monte Carlo stress test")
+    mc.add_argument("--input", default="results/", help="Results directory with sweep_summary.json")
+    mc.add_argument("--simulations", type=int, default=1000, help="Number of simulations")
+    mc.add_argument("--top", type=int, default=5, help="Top N strategies to analyze")
+    mc.add_argument("--ruin-threshold", type=float, default=-0.50, help="Max drawdown threshold for ruin")
+    mc.add_argument("--seed", type=int, default=None, help="Random seed for reproducibility")
+    
     args = parser.parse_args()
 
     
@@ -306,6 +356,8 @@ def main():
         cmd_evaluate(args)
     elif args.command == "wfa":
         cmd_wfa(args)
+    elif args.command == "montecarlo":
+        cmd_montecarlo(args)
     else:
         parser.print_help()
 

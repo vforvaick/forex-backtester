@@ -1,6 +1,6 @@
 # Features & Strategy Library
 
-The Forex Backtester implements a comprehensive library of 17 trading strategies across 5 major categories. Each strategy is designed to be self-contained and compatible with parallel execution.
+The Forex Backtester implements a comprehensive library of 20 trading strategies across 5 major categories. Each strategy is designed to be self-contained and compatible with parallel execution.
 
 ## Strategy Categories
 
@@ -26,9 +26,9 @@ Trades based on changes in market volatility or range expansion.
 
 ### 4. Pattern Based
 Identifies specific price formations and candlestick patterns.
-- **Candlestick Patterns**: Automated detection of Hammer, Engulfing, Dojo, etc.
-- **Price Action**: Pin bars and inside bar patterns.
-- **Harmonic Patterns**: (In Progress/Refinement) Fibonacci-based price formations.
+- **Candlestick Patterns**: Automated detection of Hammer, Engulfing, Doji, etc.
+- **Price Action**: Pin bars and inside bar patterns with confirmation.
+- **Harmonic Patterns**: Fibonacci-based Gartley/Bat pattern detection.
 
 ### 5. Hybrid
 Combines multiple signals or timeframes for higher confidence.
@@ -42,3 +42,5 @@ Combines multiple signals or timeframes for higher confidence.
 - **LLM Evaluation**: Automated strategy analysis using Claude, GPT-5, and Gemini.
 - **Memory-Efficient Data**: Polars and Parquet pipeline for handling 20+ years of tick data.
 - **Backtesting Journal**: Persistence of results and AI insights in SQLite.
+- **Monte Carlo Simulation**: Stress testing framework that shuffles trade sequences 1,000+ times to calculate p-values (luck vs skill) and probability of ruin.
+- **Walk-Forward Analysis**: Dynamic window validation (3yr train / 1yr test) to detect overfitting across market regimes.
