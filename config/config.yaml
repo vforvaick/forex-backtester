@@ -1,0 +1,62 @@
+# Forex Backtester Configuration
+
+# Data sources
+data:
+  primary_source: dukascopy
+  storage_path: ./data/parquet
+  symbols:
+    - EURUSD
+    - GBPUSD
+    - USDJPY
+    - AUDUSD
+    - USDCAD
+  
+# Compute nodes
+compute:
+  development:
+    host: localhost
+    max_parallel: 4
+    data_range_years: 0.1  # 2 weeks for quick tests
+    
+  validation:
+    host: thinktank.local
+    max_parallel: 8
+    data_range_years: 10
+    
+  production:
+    host: fight-uno
+    max_parallel: 4
+    data_range_years: 22
+
+# LLM Configuration
+llm:
+  proxy_url: http://fight-dos:8080/v1/chat/completions
+  models:
+    primary: claude-3-5-sonnet
+    secondary: gpt-4o
+    fallback: gemini-pro
+  temperature: 0.3
+  max_tokens: 2000
+
+# Strategy defaults
+strategy_defaults:
+  initial_capital: 10000
+  position_size_pct: 2.0  # Risk 2% per trade
+  max_positions: 3
+  stop_loss_pips: 50
+  take_profit_pips: 100
+
+# Validation settings
+validation:
+  walk_forward:
+    train_months: 120  # 10 years
+    test_months: 24    # 2 years
+    window_count: 6
+    
+  monte_carlo:
+    iterations: 1000
+    confidence_level: 0.95
+    
+  minimum_trades: 100
+  minimum_sharpe: 0.5
+  maximum_drawdown: 0.30

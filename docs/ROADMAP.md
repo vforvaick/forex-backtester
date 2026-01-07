@@ -1,0 +1,28 @@
+# Roadmap
+
+## Phase 1: Foundation (Week 1-2)
+- [x] Setup project structure
+- [x] Create Dukascopy data downloader
+- [x] Build Parquet storage pipeline
+- [x] Test HftBacktest with sample data
+
+## Phase 2: Strategy Library (Week 3-4)
+- [x] Implement 20 base strategies (17/20 complete)
+- [x] Create tuning parameter grid (5 variants each)
+- [x] Build parallel strategy runner (100% success on OCI)
+
+## Phase 3: Validation Pipeline (Week 5-6)
+- [ ] Walk-Forward Analysis framework
+- [ ] Monte Carlo simulation
+- [x] Result aggregation & ranking (Parquet sweep summary)
+
+## Phase 4: LLM Integration (Week 7-8)
+- [x] CLIProxy integration (Multi-model support)
+- [x] Journal-based context feeding (SQLite/JSON)
+- [ ] Automated parameter recommendation loop (In Progress)
+
+
+## Future Enhancements
+- [ ] Live trading adapter
+- [ ] Multi-currency portfolio optimization
+- [ ] Real-time signal generation

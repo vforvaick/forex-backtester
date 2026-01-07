@@ -1,0 +1,128 @@
+# Strategy Tuning Grid
+# Defines parameter ranges for each strategy type
+
+# Each strategy has 5 tuning variants as specified in requirements
+
+trend_following:
+  moving_average_crossover:
+    - {fast_period: 10, slow_period: 50, signal_type: ema}
+    - {fast_period: 20, slow_period: 100, signal_type: ema}
+    - {fast_period: 5, slow_period: 20, signal_type: sma}
+    - {fast_period: 12, slow_period: 26, signal_type: ema}  # MACD-like
+    - {fast_period: 8, slow_period: 21, signal_type: ema}   # Fib-based
+    
+  breakout:
+    - {period: 20, atr_multiplier: 2.0}   # Donchian 20
+    - {period: 55, atr_multiplier: 2.5}   # Turtle trading
+    - {period: 10, atr_multiplier: 1.5}   # Short-term
+    - {period: 50, atr_multiplier: 3.0}   # Conservative
+    - {period: 14, atr_multiplier: 2.0}   # ATR-based
+    
+  momentum:
+    - {rsi_period: 14, overbought: 70, oversold: 30}
+    - {rsi_period: 7, overbought: 80, oversold: 20}
+    - {rsi_period: 21, overbought: 65, oversold: 35}
+    - {macd_fast: 12, macd_slow: 26, macd_signal: 9}
+    - {stoch_k: 14, stoch_d: 3, overbought: 80, oversold: 20}
+    
+  adx_trend:
+    - {adx_period: 14, threshold: 25}
+    - {adx_period: 20, threshold: 20}
+    - {adx_period: 10, threshold: 30}
+    - {adx_period: 14, threshold: 20, di_period: 14}
+    - {adx_period: 7, threshold: 25}
+
+mean_reversion:
+  bollinger_bands:
+    - {period: 20, std_dev: 2.0}
+    - {period: 20, std_dev: 2.5}
+    - {period: 10, std_dev: 1.5}
+    - {period: 50, std_dev: 2.0}
+    - {period: 14, std_dev: 2.2}
+    
+  rsi_oversold:
+    - {period: 14, entry: 30, exit: 50}
+    - {period: 7, entry: 25, exit: 50}
+    - {period: 21, entry: 35, exit: 55}
+    - {period: 14, entry: 20, exit: 45}   # Extreme
+    - {period: 14, entry: 25, exit: 60}   # Conservative
+    
+  price_channel:
+    - {period: 20, channel_type: keltner}
+    - {period: 20, channel_type: envelope, pct: 0.5}
+    - {period: 10, channel_type: keltner}
+    - {period: 50, channel_type: envelope, pct: 1.0}
+    - {period: 14, channel_type: keltner}
+    
+  statistical_arb:
+    - {zscore_period: 20, entry_zscore: 2.0, exit_zscore: 0}
+    - {zscore_period: 50, entry_zscore: 1.5, exit_zscore: 0.5}
+    - {zscore_period: 10, entry_zscore: 2.5, exit_zscore: 0}
+    - {zscore_period: 30, entry_zscore: 2.0, exit_zscore: 0.5}
+    - {zscore_period: 20, entry_zscore: 1.0, exit_zscore: 0}   # Aggressive
+
+volatility:
+  atr_trailing:
+    - {atr_period: 14, multiplier: 2.0}
+    - {atr_period: 14, multiplier: 3.0}
+    - {atr_period: 7, multiplier: 1.5}
+    - {atr_period: 21, multiplier: 2.5}
+    - {atr_period: 10, multiplier: 2.0}
+    
+  volatility_breakout:
+    - {bb_period: 20, squeeze_threshold: 0.5}
+    - {bb_period: 20, squeeze_threshold: 0.3}
+    - {bb_period: 10, squeeze_threshold: 0.4}
+    - {bb_period: 50, squeeze_threshold: 0.6}
+    - {bb_period: 14, squeeze_threshold: 0.5}
+    
+  range_trading:
+    - {lookback: 20, breakout_pct: 0.5}
+    - {lookback: 50, breakout_pct: 0.3}
+    - {lookback: 10, breakout_pct: 0.7}
+    - {lookback: 30, breakout_pct: 0.4}
+    - {lookback: 14, breakout_pct: 0.5}
+
+pattern_based:
+  candlestick:
+    - {patterns: [doji, engulfing], confirm_period: 3}
+    - {patterns: [hammer, shooting_star], confirm_period: 2}
+    - {patterns: [morning_star, evening_star], confirm_period: 1}
+    - {patterns: [engulfing], confirm_period: 5}
+    - {patterns: [doji, hammer, engulfing], confirm_period: 3}
+    
+  price_action:
+    - {pin_bar: true, inside_bar: true, lookback: 5}
+    - {pin_bar: true, inside_bar: false, lookback: 3}
+    - {pin_bar: false, inside_bar: true, lookback: 7}
+    - {pin_bar: true, inside_bar: true, lookback: 10}
+    - {pin_bar: true, inside_bar: true, lookback: 3}
+    
+  harmonic:
+    - {patterns: [gartley], tolerance: 0.05}
+    - {patterns: [butterfly], tolerance: 0.03}
+    - {patterns: [bat, crab], tolerance: 0.05}
+    - {patterns: [gartley, butterfly], tolerance: 0.04}
+    - {patterns: [all], tolerance: 0.06}
+
+hybrid:
+  multi_timeframe:
+    - {tf_trend: H4, tf_entry: M15, trend_indicator: ema_50}
+    - {tf_trend: D1, tf_entry: H1, trend_indicator: sma_200}
+    - {tf_trend: H1, tf_entry: M5, trend_indicator: ema_20}
+    - {tf_trend: H4, tf_entry: M30, trend_indicator: ema_100}
+    - {tf_trend: D1, tf_entry: H4, trend_indicator: sma_50}
+    
+  regime_switching:
+    - {adx_threshold: 25, trend_strategy: momentum, range_strategy: mean_reversion}
+    - {adx_threshold: 20, trend_strategy: breakout, range_strategy: bollinger}
+    - {adx_threshold: 30, trend_strategy: ma_cross, range_strategy: rsi}
+    - {volatility_percentile: 50, high_vol: breakout, low_vol: range}
+    - {atr_sma_ratio: 1.5, trend_strategy: momentum, range_strategy: channel}
+    
+  ensemble:
+    - {strategies: [ma_cross, rsi, breakout], vote_threshold: 2}
+    - {strategies: [momentum, mean_reversion], weight: [0.6, 0.4]}
+    - {strategies: [ma_cross, bollinger, macd], vote_threshold: 2}
+    - {strategies: [breakout, momentum], weight: [0.5, 0.5]}
+    - {strategies: [rsi, stochastic, macd], vote_threshold: 2}
