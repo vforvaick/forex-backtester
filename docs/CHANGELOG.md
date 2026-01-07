@@ -18,9 +18,9 @@ All notable changes to forex-backtester will be documented in this file.
 
 ## [2026-01-08] - Strategy Library 20/20 Complete
 ### Added
-- **Price Action Strategy Enhanced**: Proper Pin Bar/Inside Bar detection with body/wick ratio thresholds, lookahead fix (removed `shift(-1)`), confirmation mechanism for breakouts, full 8-metric calculation.
-- **Harmonic Patterns Strategy Enhanced**: XABCD swing point detection, Gartley/Bat pattern recognition using Fibonacci ratios (0.618, 0.786, 0.886), momentum-based confirmation signals, complete metrics.
-- **Regime Switching Strategy Enhanced**: Proper ADX calculation with directional movement, ATR-based volatility regime detection (percentile-based), adaptive strategy switching (trend-following in trending markets, mean-reversion in ranging low-vol), stayed-out logic for choppy markets.
+- **Price Action Strategy Enhanced**: Proper Pin Bar/Inside Bar detection with body/wick ratio thresholds, lookahead fix (removed `shift(-1)`), confirmation mechanism for breakouts, full 8-metric calculation with **transaction costs integration**.
+- **Harmonic Patterns Strategy Enhanced**: XABCD swing point detection, Gartley/Bat pattern recognition using Fibonacci ratios (0.618, 0.786, 0.886), momentum-based confirmation signals, complete metrics with **transaction costs integration**.
+- **Regime Switching Strategy Enhanced**: Proper ADX calculation with directional movement, ATR-based volatility regime detection (percentile-based), adaptive strategy switching (trend-following in trending markets, mean-reversion in ranging low-vol), stayed-out logic for choppy markets, and **transaction costs integration**.
 
 ## [2026-01-08] - Phase 3 & 4 Completion
 ### Added
