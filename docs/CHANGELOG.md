@@ -29,9 +29,10 @@ All notable changes to forex-backtester will be documented in this file.
 - Resolved `ColumnNotFoundError` in parallel execution by ensuring lazy Polars expressions are evaluated on dataframes with materialized indicators.
 - Fixed Polars method name consistency (`cum_prod` vs `cumprod`).
 - Updated `Backtester` to handle strategy functions returning full metrics dictionaries.
+- **Candlestick Strategy Bug** (2026-01-08): Fixed 0-trades issue. Root cause was signal expression not being evaluated to Series, missing `mid` column calculation, and incorrect Polars filter syntax. Now produces 7,427 trades with Sharpe 33.78, Win Rate 5.41%, PF 1.62.
 
 ### Discovered Issues
-- **Candlestick Strategy Bug**: Reported Sharpe 84.89 with 0 trades but positive total return (4.7%). Confirmed by all 3 LLM models as a metrics calculation or signal generation flaw.
+- ~~**Candlestick Strategy Bug**: Reported Sharpe 84.89 with 0 trades but positive total return (4.7%). Confirmed by all 3 LLM models as a metrics calculation or signal generation flaw.~~ **FIXED**
 - **ISP Blocking**: Verified that MyRepublic (thinktank) blocks/redirects Dukascopy datafeed. Switched primary data acquisition to OCI (fight-uno).
 
 ### Files Modified
