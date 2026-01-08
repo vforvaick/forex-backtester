@@ -1,0 +1,27 @@
+# Optimization Policy
+# Defines how trials are scored and which constraints must be met
+
+primary_metric: sharpe
+
+# Hard constraints - trials violating these are auto-rejected
+constraints:
+  min_trades: 100
+  max_drawdown: 0.20  # 20%
+  min_win_rate: 0.40  # 40%
+  max_ruin_prob: 0.30  # 30% (Monte Carlo)
+  max_mc_pvalue: 0.10  # Skill threshold
+
+# Weighted scoring for comparison
+weights:
+  sharpe: 0.40
+  sortino: 0.25
+  profit_factor: 0.20
+  calmar: 0.15
+
+# Multi-model consensus
+consensus:
+  threshold: 0.66  # 2/3 models must agree
+  models:
+    - gemini-claude-opus-4-5-thinking
+    - gemini-3-pro-preview
+    - gpt-5.2

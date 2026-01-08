@@ -13,7 +13,7 @@ The Forex Backtester is designed to handle massive-scale strategy sweeps across 
 - **Realistic Transaction Costs**: Integrated spread, commission, and slippage modeling for all strategies.
 - **22+ Year History**: Support for historical tick data from Dukascopy (2003-present).
 - **Multi-Model AI Evaluation**: Deep strategy analysis from Claude Opus 4.5, Gemini 3 Pro, and GPT 5.2.
-- **Intelligent Journaling**: Persistent SQLite memory to help LLMs learn from previous iterations.
+- **Automated Parameter Optimization**: Closed-loop refinement with multi-model consensus, bounds validation, and Monte Carlo gatekeeping.
 
 ## 📁 Project Structure
 
@@ -21,18 +21,19 @@ The Forex Backtester is designed to handle massive-scale strategy sweeps across 
 forex-backtester/
 ├── docs/              # Essential Documentation (Architecture, Changelog, Roadmap)
 ├── data/              # Historical Tick Data (Parquet format)
-├── strategies/        # 20 base strategy implementations (Trend, Reversion, Volatility)
+├── strategies/        # 20 base strategy implementations
 ├── engine/            # Core backtesting & parallel runner logic
 ├── journal/           # Result tracking and LLM context management
-├── llm/               # CLIProxy integration for strategy evaluation
-└── config/            # Parameter grids for automated sweeps
+├── llm/               # CLIProxy & ParameterRecommender
+├── trials/            # AI-generated parameter sets (v0.1.0+)
+└── config/            # Tuning grids & optimization policies
 ```
 
 ## 📖 Documentation
 
 - **[Setup Guide](docs/setup.md)**: Installation and configuration.
 - **[Architecture](docs/architecture.md)**: Deep dive into the distributed system.
-- **[Strategy Library](docs/features.md)**: Detailed breakdown of implemented strategies.
+- **[Feature List](docs/features.md)**: Detailed breakdown of strategies and optimization loop.
 - **[Testing Guide](docs/TESTING.md)**: How to run backtests and sweeps.
 - **[Changelog](docs/CHANGELOG.md)**: Track progress and updates.
 - **[Roadmap](docs/ROADMAP.md)**: Future plans and current status.
@@ -44,11 +45,16 @@ forex-backtester/
    ```bash
    python3 main.py sweep --n-jobs 4
    ```
-3. **Evaluate with AI**:
+3. **Optimize a strategy**:
    ```bash
-   python3 main.py evaluate --input results/ --top 3
+   python3 main.py optimize --strategy rsi_oversold
+   ```
+4. **Compare and Promote**:
+   ```bash
+   python3 main.py compare --trial trials/mean_reversion/rsi_oversold/trial_001.yaml
+   python3 main.py promote --trial trials/mean_reversion/rsi_oversold/trial_001.yaml
    ```
 
 ---
 
-*Phase 3 and 4 foundation are complete. Strategic refinement with transaction costs is ongoing.*
+*Phase 4 is complete. Automated parameter optimization is now operational.*

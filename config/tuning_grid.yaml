@@ -4,6 +4,21 @@
 # Each strategy has 5 tuning variants as specified in requirements
 
 trend_following:
+  _bounds:
+    moving_average_crossover:
+      fast_period: [3, 50]
+      slow_period: [20, 200]
+    breakout:
+      period: [5, 100]
+      atr_multiplier: [1.0, 5.0]
+    momentum:
+      rsi_period: [5, 30]
+      overbought: [60, 90]
+      oversold: [10, 40]
+    adx_trend:
+      adx_period: [5, 30]
+      threshold: [15, 40]
+
   moving_average_crossover:
     - {fast_period: 10, slow_period: 50, signal_type: ema}
     - {fast_period: 20, slow_period: 100, signal_type: ema}
@@ -33,6 +48,21 @@ trend_following:
     - {adx_period: 7, threshold: 25}
 
 mean_reversion:
+  _bounds:
+    bollinger_bands:
+      period: [5, 100]
+      std_dev: [1.0, 4.0]
+    rsi_oversold:
+      period: [5, 50]
+      entry: [10, 45]
+      exit: [40, 70]
+    price_channel:
+      period: [5, 100]
+    statistical_arb:
+      zscore_period: [5, 100]
+      entry_zscore: [0.5, 4.0]
+      exit_zscore: [0.0, 2.0]
+
   bollinger_bands:
     - {period: 20, std_dev: 2.0}
     - {period: 20, std_dev: 2.5}
@@ -62,6 +92,17 @@ mean_reversion:
     - {zscore_period: 20, entry_zscore: 1.0, exit_zscore: 0}   # Aggressive
 
 volatility:
+  _bounds:
+    atr_trailing:
+      atr_period: [5, 50]
+      multiplier: [1.0, 5.0]
+    volatility_breakout:
+      bb_period: [5, 100]
+      squeeze_threshold: [0.1, 1.0]
+    range_trading:
+      lookback: [5, 100]
+      breakout_pct: [0.1, 1.0]
+
   atr_trailing:
     - {atr_period: 14, multiplier: 2.0}
     - {atr_period: 14, multiplier: 3.0}
@@ -84,6 +125,14 @@ volatility:
     - {lookback: 14, breakout_pct: 0.5}
 
 pattern_based:
+  _bounds:
+    candlestick:
+      confirm_period: [1, 10]
+    price_action:
+      lookback: [3, 20]
+    harmonic:
+      tolerance: [0.01, 0.10]
+
   candlestick:
     - {patterns: [doji, engulfing], confirm_period: 3}
     - {patterns: [hammer, shooting_star], confirm_period: 2}
@@ -106,6 +155,13 @@ pattern_based:
     - {patterns: [all], tolerance: 0.06}
 
 hybrid:
+  _bounds:
+    regime_switching:
+      adx_threshold: [15, 40]
+      volatility_percentile: [20, 80]
+    ensemble:
+      vote_threshold: [1, 5]
+
   multi_timeframe:
     - {tf_trend: H4, tf_entry: M15, trend_indicator: ema_50}
     - {tf_trend: D1, tf_entry: H1, trend_indicator: sma_200}
@@ -126,3 +182,4 @@ hybrid:
     - {strategies: [ma_cross, bollinger, macd], vote_threshold: 2}
     - {strategies: [breakout, momentum], weight: [0.5, 0.5]}
     - {strategies: [rsi, stochastic, macd], vote_threshold: 2}
+

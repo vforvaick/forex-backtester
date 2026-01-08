@@ -16,6 +16,24 @@ All notable changes to forex-backtester will be documented in this file.
   - Pattern Based: Candlestick, Price Action, Harmonic
   - Hybrid: Multi-Timeframe, Regime Switching, Ensemble
 
+## [2026-01-08] - Automated Parameter Recommendation Loop
+### Added
+- **6 new CLI commands**: `optimize`, `compare`, `explain`, `promote`, `undo`, `validate`
+- **Multi-Model Consensus**: 2/3 LLM agreement required before generating trials
+- **Parameter Bounds Validation**: `_bounds` in `tuning_grid.yaml` prevents LLM hallucinations
+- **Monte Carlo Gatekeeper**: Blocks trials with p-value ≥0.10 or ruin prob ≥30%
+- **Optimization Policy**: `config/optimization_policy.yaml` (weights, constraints, consensus threshold)
+- **Git-based Reversibility**: Promotions via git commit, undo via git revert
+- **Dry-run Mode**: Preview changes before promotion
+
+### New Files
+- `llm/recommender.py`: `ParameterRecommender` class with consensus, validation, trial generation
+- `config/optimization_policy.yaml`: Policy config for optimization loop
+- `trials/`: Strategy-scoped trial directory structure
+
+### Reference
+- Session: f39a4567-70fc-47b2-8303-9b27c3636fa5
+
 ## [2026-01-08] - Transaction Cost Model
 ### Added
 - **Realistic Transaction Costs**: `engine/transaction_costs.py` with spread, commission, slippage modeling

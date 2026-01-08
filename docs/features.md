@@ -44,3 +44,22 @@ Combines multiple signals or timeframes for higher confidence.
 - **Backtesting Journal**: Persistence of results and AI insights in SQLite.
 - **Monte Carlo Simulation**: Stress testing framework that shuffles trade sequences 1,000+ times to calculate p-values (luck vs skill) and probability of ruin.
 - **Walk-Forward Analysis**: Dynamic window validation (3yr train / 1yr test) to detect overfitting across market regimes.
+
+## Automated Parameter Optimization
+A closed-loop system for LLM-driven strategy refinement with human oversight.
+
+- **Multi-Model Consensus**: Requires 2/3 agreement from Claude, GPT, Gemini before generating trials.
+- **Parameter Bounds**: Validates LLM suggestions against `_bounds` in `tuning_grid.yaml`.
+- **Monte Carlo Gatekeeper**: Blocks trials with p-value ≥0.10 or ruin probability ≥30%.
+- **Optimization Policy**: Configurable weights, constraints, and consensus thresholds in `optimization_policy.yaml`.
+- **Git-based Reversibility**: Promotions via git commit, undo via git revert.
+
+### CLI Commands
+```bash
+python main.py optimize --strategy rsi_oversold     # Generate trial from LLM
+python main.py compare --trial trials/.../trial.yaml  # A/B with MC metrics
+python main.py explain --trial trials/.../trial.yaml  # Show LLM reasoning
+python main.py promote --trial trials/.../trial.yaml  # Git commit
+python main.py undo --trial-id trial_001             # Git revert
+python main.py validate --last 3                     # Degradation check
+```

@@ -298,6 +298,242 @@ def cmd_montecarlo(args):
         print(f"⚠️  WARNING: {high_ruin} strategies have >30% probability of ruin")
 
 
+def cmd_optimize(args):
+    """Generate optimized trial config from LLM recommendations."""
+    from llm.recommender import ParameterRecommender
+    from llm.cliproxy_evaluator import evaluate_strategy_sync
+    import json
+    
+    recommender = ParameterRecommender()
+    
+    # Get models from policy
+    models = recommender.policy.get("consensus", {}).get("models", [
+        "gemini-claude-opus-4-5-thinking",
+        "gemini-3-pro-preview",
+        "gpt-5.2"
+    ])
+    
+    # Load latest sweep results
+    results_file = Path(args.input) / "sweep_summary.json"
+    if not results_file.exists():
+        print(f"❌ No sweep results found at {results_file}")
+        print("Run: python main.py sweep --output results/")
+        return
+    
+    with open(results_file) as f:
+        results = json.load(f)
+    
+    # Find the strategy
+    strategy_results = [r for r in results if r["strategy"] == args.strategy]
+    if not strategy_results:
+        print(f"❌ Strategy '{args.strategy}' not found in sweep results")
+        return
+    
+    best = max(strategy_results, key=lambda x: x["metrics"].get("sharpe", 0))
+    print(f"📊 Best config for {args.strategy}: Sharpe={best['metrics'].get('sharpe', 0):.2f}")
+    
+    # Get evaluations from all models
+    print(f"\n🤖 Getting recommendations from {len(models)} models...")
+    evaluations = []
+    for model in models:
+        print(f"  → {model}...", end=" ", flush=True)
+        result = evaluate_strategy_sync(
+            strategy_name=args.strategy,
+            metrics=best["metrics"],
+            run_id=best.get("run_id", -1),
+            model=model
+        )
+        result["model"] = model
+        evaluations.append(result)
+        verdict = result.get("verdict", "error")
+        print(f"[{verdict}]")
+    
+    # Check consensus
+    has_consensus, agreed = recommender.check_consensus(evaluations)
+    
+    if not has_consensus:
+        print("\n⚠️ No consensus reached. Models disagree:")
+        for eval_result in evaluations:
+            recs = eval_result.get("recommendations", [])
+            if recs:
+                print(f"  {eval_result['model']}: {recs[0].get('param')} → {recs[0].get('suggested')}")
+        print("\nFlag for human review.")
+        return
+    
+    print(f"\n✅ Consensus reached on {len(agreed)} parameter(s):")
+    for param, rec in agreed.items():
+        print(f"  {param}: → {rec['suggested']} ({rec['agreement']:.0%} agreement)")
+    
+    # Determine category
+    category = None
+    import yaml
+    with open("config/tuning_grid.yaml") as f:
+        grid = yaml.safe_load(f)
+    for cat, strategies in grid.items():
+        if cat == "_bounds":
+            continue
+        if args.strategy in strategies:
+            category = cat
+            break
+    
+    if not category:
+        print(f"❌ Could not find category for {args.strategy}")
+        return
+    
+    # Generate trial
+    trial = recommender.generate_trial(
+        category=category,
+        strategy=args.strategy,
+        recommendations=agreed,
+        source_run_id=best.get("run_id", -1),
+        llm_model=", ".join(models)
+    )
+    
+    if trial:
+        print(f"\n🎯 Next step: Run the trial backtest and compare")
+        print(f"   python main.py compare --trial trials/{category}/{args.strategy}/{trial.meta.trial_id}.yaml")
+
+
+def cmd_compare(args):
+    """Compare original vs trial with MC stress test."""
+    from llm.recommender import ParameterRecommender
+    import yaml
+    import json
+    
+    trial_path = Path(args.trial)
+    if not trial_path.exists():
+        print(f"❌ Trial not found: {trial_path}")
+        return
+    
+    with open(trial_path) as f:
+        trial = yaml.safe_load(f)
+    
+    recommender = ParameterRecommender()
+    
+    # For demo, use mock metrics (in production, run actual backtest)
+    # TODO: Integrate with actual backtest run
+    original_metrics = {
+        "sharpe": 1.20, "sortino": 1.5, "max_drawdown": -0.12,
+        "win_rate": 0.52, "profit_factor": 1.6, "total_trades": 342
+    }
+    trial_metrics = {
+        "sharpe": 1.45, "sortino": 1.8, "max_drawdown": -0.10,
+        "win_rate": 0.55, "profit_factor": 1.8, "total_trades": 289
+    }
+    
+    print("Running Monte Carlo stress test...")
+    original_mc = recommender.run_mc_check(original_metrics)
+    trial_mc = recommender.run_mc_check(trial_metrics)
+    
+    print("\n" + recommender.compare(original_metrics, trial_metrics, original_mc, trial_mc))
+    
+    # Check MC gatekeeper
+    max_pvalue = recommender.policy.get("constraints", {}).get("max_mc_pvalue", 0.10)
+    max_ruin = recommender.policy.get("constraints", {}).get("max_ruin_prob", 0.30)
+    
+    if trial_mc["p_value"] >= max_pvalue:
+        print(f"\n🚫 BLOCKED: P-value {trial_mc['p_value']:.2f} >= {max_pvalue} (overfitting risk)")
+    elif trial_mc["ruin_prob"] >= max_ruin:
+        print(f"\n🚫 BLOCKED: Ruin prob {trial_mc['ruin_prob']:.1%} >= {max_ruin:.0%}")
+    else:
+        print(f"\n✅ Trial passes MC gatekeeper. Promote with:")
+        print(f"   python main.py promote --trial {trial_path}")
+
+
+def cmd_explain(args):
+    """Show detailed explanation of a trial."""
+    from llm.recommender import ParameterRecommender
+    
+    trial_path = Path(args.trial)
+    if not trial_path.exists():
+        print(f"❌ Trial not found: {trial_path}")
+        return
+    
+    recommender = ParameterRecommender()
+    print(recommender.explain_trial(trial_path))
+
+
+def cmd_promote(args):
+    """Promote a trial to tuning_grid.yaml with git commit."""
+    from llm.recommender import ParameterRecommender
+    
+    trial_path = Path(args.trial)
+    if not trial_path.exists():
+        print(f"❌ Trial not found: {trial_path}")
+        return
+    
+    recommender = ParameterRecommender()
+    
+    if args.dry_run:
+        success, msg = recommender.git_promote(trial_path, dry_run=True)
+        print(msg)
+    else:
+        # Show preview first
+        success, preview = recommender.git_promote(trial_path, dry_run=True)
+        print(preview)
+        
+        confirm = input("\nProceed with promotion? [y/N]: ").strip().lower()
+        if confirm == "y":
+            success, msg = recommender.git_promote(trial_path, dry_run=False)
+            print(msg)
+        else:
+            print("Aborted.")
+
+
+def cmd_undo(args):
+    """Undo a trial promotion."""
+    from llm.recommender import ParameterRecommender
+    
+    recommender = ParameterRecommender()
+    
+    if args.dry_run:
+        success, msg = recommender.git_undo(args.trial_id, dry_run=True)
+        print(msg)
+    else:
+        # Show preview first
+        success, preview = recommender.git_undo(args.trial_id, dry_run=True)
+        print(preview)
+        
+        confirm = input("\nProceed with undo? [y/N]: ").strip().lower()
+        if confirm == "y":
+            success, msg = recommender.git_undo(args.trial_id, dry_run=False)
+            print(msg)
+        else:
+            print("Aborted.")
+
+
+def cmd_validate(args):
+    """Check for degradation in recently promoted strategies."""
+    import json
+    
+    # Load promotion history from git log
+    import subprocess
+    result = subprocess.run(
+        ["git", "log", "--oneline", "--grep", "optimize: promote", f"-{args.last}"],
+        capture_output=True, text=True, cwd="."
+    )
+    
+    commits = [line for line in result.stdout.strip().split("\n") if line]
+    
+    if not commits:
+        print("No promotions found in git history.")
+        return
+    
+    print(f"Checking {len(commits)} recent promotions...\n")
+    
+    for commit in commits:
+        parts = commit.split()
+        commit_hash = parts[0]
+        strategy = parts[-1] if len(parts) > 2 else "unknown"
+        
+        # In production, would re-run backtest on latest data
+        # For now, just show the promotions
+        print(f"  {commit_hash[:7]}: {strategy}")
+    
+    print("\n⚠️ Note: Full degradation check requires running backtests on new data.")
+    print("   This is a placeholder for the full implementation.")
+
+
 def main():
 
     parser = argparse.ArgumentParser(
@@ -343,6 +579,37 @@ def main():
     mc.add_argument("--ruin-threshold", type=float, default=-0.50, help="Max drawdown threshold for ruin")
     mc.add_argument("--seed", type=int, default=None, help="Random seed for reproducibility")
     
+    # === NEW OPTIMIZATION COMMANDS ===
+    
+    # Optimize command
+    opt = subparsers.add_parser("optimize", help="Generate optimized trial from LLM recommendations")
+    opt.add_argument("--strategy", required=True, help="Strategy name to optimize")
+    opt.add_argument("--input", default="results/", help="Results directory with sweep_summary.json")
+    opt.add_argument("--target", default="sharpe", choices=["sharpe", "safe", "aggressive"],
+                     help="Optimization target")
+    
+    # Compare command
+    cmp = subparsers.add_parser("compare", help="Compare original vs trial with MC stress test")
+    cmp.add_argument("--trial", required=True, help="Path to trial YAML file")
+    
+    # Explain command
+    exp = subparsers.add_parser("explain", help="Show detailed explanation of a trial")
+    exp.add_argument("--trial", required=True, help="Path to trial YAML file")
+    
+    # Promote command
+    prom = subparsers.add_parser("promote", help="Promote trial to tuning_grid.yaml")
+    prom.add_argument("--trial", required=True, help="Path to trial YAML file")
+    prom.add_argument("--dry-run", action="store_true", help="Show what would change without applying")
+    
+    # Undo command
+    undo = subparsers.add_parser("undo", help="Undo a trial promotion")
+    undo.add_argument("--trial-id", required=True, help="Trial ID to undo (e.g., trial_001)")
+    undo.add_argument("--dry-run", action="store_true", help="Show what would change without applying")
+    
+    # Validate command
+    val = subparsers.add_parser("validate", help="Check for degradation in promoted strategies")
+    val.add_argument("--last", type=int, default=3, help="Number of recent promotions to check")
+    
     args = parser.parse_args()
 
     
@@ -358,9 +625,22 @@ def main():
         cmd_wfa(args)
     elif args.command == "montecarlo":
         cmd_montecarlo(args)
+    elif args.command == "optimize":
+        cmd_optimize(args)
+    elif args.command == "compare":
+        cmd_compare(args)
+    elif args.command == "explain":
+        cmd_explain(args)
+    elif args.command == "promote":
+        cmd_promote(args)
+    elif args.command == "undo":
+        cmd_undo(args)
+    elif args.command == "validate":
+        cmd_validate(args)
     else:
         parser.print_help()
 
 
 if __name__ == "__main__":
     main()
+

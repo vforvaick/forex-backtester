@@ -1,19 +1,22 @@
 """
-Multi-Pair Forex Data Downloader with Throttling
+Multi-Pair Forex Data Downloader with Automated Resilience
 
 Downloads all major forex pairs from Dukascopy with:
 - Queue-based sequential processing
 - Throttled concurrency (max 2 workers)
-- Delay between requests to prevent rate limiting
+- AUTOMATED RESILIENCE: Hard timeouts (1h per year) via multiprocessing
+- AUTOMATED RETRY: Up to 3 attempts per year
 - Resume capability (skips already downloaded years)
 """
 
 import os
 import time
-import asyncio
-from datetime import datetime, timedelta
+import json
+import signal
+import multiprocessing
+from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Dict
 
 import polars as pl
 
@@ -44,14 +47,19 @@ PAIRS = {
 END_YEAR = 2024
 
 # Throttling settings
-MAX_CONCURRENT_WORKERS = 2  # Reduced from default 10
-DELAY_BETWEEN_YEARS = 5     # Seconds between year downloads
-DELAY_BETWEEN_PAIRS = 10    # Seconds between pair switches
+MAX_CONCURRENT_WORKERS = 2  
+DELAY_BETWEEN_YEARS = 5     
+DELAY_BETWEEN_PAIRS = 10    
+
+# Automation settings
+YEAR_TIMEOUT_SECONDS = 3600  # 1 hour hard timeout per year
+MAX_RETRIES = 3              # Max retries if year fails or times out
 
 # Paths
 DATA_DIR = Path("data/parquet")
-TEMP_DIR = Path("data/temp")
+TEMP_BASE_DIR = Path("/tmp/duka_download")
 LOG_FILE = Path("logs/download_queue.log")
+STATUS_FILE = Path("data/download_status.json")
 
 
 def log(msg: str):
@@ -59,8 +67,33 @@ def log(msg: str):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     line = f"[{timestamp}] {msg}"
     print(line)
-    with open(LOG_FILE, "a") as f:
-        f.write(line + "\n")
+    try:
+        LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with open(LOG_FILE, "a") as f:
+            f.write(line + "\n")
+    except Exception as e:
+        print(f"Logging error: {e}")
+
+
+def load_status() -> Dict:
+    """Load persistent status from JSON."""
+    if STATUS_FILE.exists():
+        try:
+            with open(STATUS_FILE, "r") as f:
+                return json.load(f)
+        except:
+            return {}
+    return {}
+
+
+def save_status(status: Dict):
+    """Save persistent status to JSON."""
+    try:
+        STATUS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with open(STATUS_FILE, "w") as f:
+            json.dump(status, f, indent=2)
+    except Exception as e:
+        log(f"Error saving status: {e}")
 
 
 def get_downloaded_years(pair: str) -> List[int]:
@@ -73,155 +106,164 @@ def get_downloaded_years(pair: str) -> List[int]:
     for f in pair_dir.iterdir():
         if f.suffix == ".parquet":
             try:
-                year = int(f.stem)
-                # Verify file is not empty/corrupt
-                df = pl.read_parquet(f)
-                if len(df) > 1000:  # Minimum viable data
-                    years.append(year)
+                # Basic check: is file reasonable size?
+                if f.stat().st_size > 1000 * 1024:  # > 1MB
+                    years.append(int(f.stem))
             except:
                 pass
     return sorted(years)
 
 
-def download_year(pair: str, year: int) -> bool:
-    """Download a single year of tick data for a pair. Based on working download_xauusd.py."""
-    from datetime import date, timedelta
-    import os
-    
-    output_dir = DATA_DIR / pair
-    output_dir.mkdir(parents=True, exist_ok=True)
-    output_file = output_dir / f"{year}.parquet"
-    
-    # Skip if already exists and valid
-    if output_file.exists():
-        try:
-            df = pl.read_parquet(output_file)
-            if len(df) > 1000:
-                log(f"SKIP {pair}/{year} - already downloaded ({len(df):,} rows)")
-                return True
-        except:
-            log(f"WARN {pair}/{year} - corrupt file, re-downloading")
-            output_file.unlink()
-    
-    log(f"START {pair}/{year}")
-    
-    # Use date (not datetime) - same as working script
-    start = date(year, 1, 1)
-    end = date(year, 12, 31)
-    
-    # Don't download future dates
-    if end > date.today():
-        end = date.today() - timedelta(days=1)
-    
-    if start > date.today():
-        log(f"SKIP {pair}/{year} - future date")
-        return True
-    
-    # Use temp directory
-    temp_dir = Path('/tmp/duka_download') / pair
-    temp_dir.mkdir(parents=True, exist_ok=True)
-    
+def _duka_worker(pair: str, start: date, end: date, threads: int, output_dir: str):
+    """Worker function for multiprocessing."""
     try:
-        # Download using duka - EXACT same call as working script
         duka_download(
             [pair],
             start,
             end,
-            MAX_CONCURRENT_WORKERS,  # threads (reduced from default)
+            threads,
             TimeFrame.TICK,
-            str(temp_dir),
+            output_dir,
             True  # header
         )
+    except Exception as e:
+        print(f"Worker Error: {e}")
+        os._exit(1)
+
+
+def download_year_with_retry(pair: str, year: int) -> bool:
+    """Download a year with timeout and retry logic."""
+    output_dir = DATA_DIR / pair
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_file = output_dir / f"{year}.parquet"
+    
+    # Quick skip check
+    if output_file.exists() and output_file.stat().st_size > 1000 * 1024:
+        log(f"SKIP {pair}/{year} - already exists")
+        return True
+
+    status = load_status()
+    key = f"{pair}_{year}"
+    attemp_count = status.get(key, {}).get("retries", 0)
+
+    if attemp_count >= MAX_RETRIES:
+        log(f"SKIP {pair}/{year} - Max retries reached ({attemp_count})")
+        return False
+
+    for attempt in range(attemp_count + 1, MAX_RETRIES + 1):
+        log(f"START {pair}/{year} (Attempt {attempt}/{MAX_RETRIES})")
         
-        # Find and convert CSV
-        csvs = list(temp_dir.glob(f'{pair}*.csv'))
-        if csvs:
-            csv_path = sorted(csvs, key=os.path.getmtime)[-1]
-            log(f"Converting {csv_path.name} to Parquet...")
-            
-            df = pl.read_csv(csv_path, try_parse_dates=True)
-            
-            # Standardize column names
-            if 'time' in df.columns:
-                df = df.rename({'time': 'timestamp'})
-            
-            # Add mid price and spread
-            df = df.with_columns([
-                ((pl.col('ask') + pl.col('bid')) / 2).alias('mid'),
-                (pl.col('ask') - pl.col('bid')).alias('spread')
-            ])
-            
-            df.write_parquet(output_file)
-            log(f"DONE {pair}/{year} - {len(df):,} rows saved")
-            
-            # Cleanup
-            csv_path.unlink()
+        start = date(year, 1, 1)
+        end = date(year, 12, 31)
+        if end > date.today(): end = date.today() - timedelta(days=1)
+        if start > date.today(): return True
+
+        temp_dir = TEMP_BASE_DIR / pair
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Run in separate process for hard timeout
+        p = multiprocessing.Process(
+            target=_duka_worker, 
+            args=(pair, start, end, MAX_CONCURRENT_WORKERS, str(temp_dir))
+        )
+        p.start()
+        p.join(YEAR_TIMEOUT_SECONDS)
+
+        success = False
+        if p.is_alive():
+            log(f"TIMEOUT {pair}/{year} after {YEAR_TIMEOUT_SECONDS}s. Killing worker...")
+            p.terminate()
+            p.join()
+        elif p.exitcode == 0:
+            # Check if CSV was produced
+            csvs = list(temp_dir.glob(f'{pair}*.csv'))
+            if csvs:
+                success = _process_csv(pair, year, csvs, output_file)
+            else:
+                log(f"WARN {pair}/{year} - Worker finished but no CSV produced")
+        else:
+            log(f"ERROR {pair}/{year} - Worker failed with exit code {p.exitcode}")
+
+        if success:
+            # Reset retry count on success
+            status[key] = {"retries": 0, "status": "done", "last_attempt": datetime.now().isoformat()}
+            save_status(status)
             return True
         else:
-            log(f"WARN {pair}/{year} - no CSV found")
-            return False
-            
+            status[key] = {"retries": attempt, "status": "failed", "last_attempt": datetime.now().isoformat()}
+            save_status(status)
+            if attempt < MAX_RETRIES:
+                log(f"Retrying in 10s...")
+                time.sleep(10)
+    
+    return False
+
+
+def _process_csv(pair: str, year: int, csvs: List[Path], output_file: Path) -> bool:
+    """Helper to convert duka CSV to standardized Parquet."""
+    try:
+        csv_path = sorted(csvs, key=os.path.getmtime)[-1]
+        log(f"Converting {csv_path.name} to Parquet...")
+        
+        df = pl.read_csv(csv_path, try_parse_dates=True)
+        
+        # Standardize
+        if 'time' in df.columns:
+            df = df.rename({'time': 'timestamp'})
+        
+        # Core columns + mid/spread
+        df = df.with_columns([
+            ((pl.col('ask') + pl.col('bid')) / 2).alias('mid'),
+            (pl.col('ask') - pl.col('bid')).alias('spread')
+        ])
+        
+        df.write_parquet(output_file)
+        log(f"DONE {pair}/{year} - {len(df):,} rows saved")
+        
+        # Cleanup
+        csv_path.unlink()
+        return True
     except Exception as e:
-        log(f"ERROR {pair}/{year} - {e}")
+        log(f"Conversion error {pair}/{year}: {e}")
         return False
 
 
 def run_download_queue():
     """Main queue processor."""
     log("=" * 60)
-    log("STARTING MULTI-PAIR DOWNLOAD QUEUE")
+    log("STARTING AUTOMATED DOWNLOAD QUEUE")
     log(f"Pairs: {list(PAIRS.keys())}")
-    log(f"End Year: {END_YEAR}")
-    log(f"Throttle: {MAX_CONCURRENT_WORKERS} workers, {DELAY_BETWEEN_YEARS}s delay")
+    log(f"Resilience: {YEAR_TIMEOUT_SECONDS}s timeout, {MAX_RETRIES} retries")
     log("=" * 60)
-    
-    total_downloaded = 0
-    total_skipped = 0
-    total_failed = 0
     
     for pair, start_year in PAIRS.items():
         log(f"\n>>> Processing {pair} (from {start_year}) <<<")
         
-        downloaded_years = get_downloaded_years(pair)
-        log(f"Already have: {downloaded_years}")
+        downloaded = get_downloaded_years(pair)
+        log(f"Valid Parquets: {downloaded}")
         
         for year in range(start_year, END_YEAR + 1):
-            if year in downloaded_years:
-                total_skipped += 1
+            if year in downloaded:
                 continue
             
-            success = download_year(pair, year)
-            
-            if success:
-                total_downloaded += 1
-            else:
-                total_failed += 1
-            
-            # Throttle between years
-            log(f"Sleeping {DELAY_BETWEEN_YEARS}s before next year...")
+            download_year_with_retry(pair, year)
             time.sleep(DELAY_BETWEEN_YEARS)
         
-        # Throttle between pairs
-        log(f"Sleeping {DELAY_BETWEEN_PAIRS}s before next pair...")
         time.sleep(DELAY_BETWEEN_PAIRS)
     
     log("\n" + "=" * 60)
     log("DOWNLOAD QUEUE COMPLETE")
-    log(f"Downloaded: {total_downloaded}")
-    log(f"Skipped: {total_skipped}")
-    log(f"Failed: {total_failed}")
     log("=" * 60)
 
 
 if __name__ == "__main__":
-    # Ensure log directory exists
-    LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
-    
-    # Set process priority to low (nice)
     try:
-        os.nice(10)  # Lower priority
-        log("Process priority lowered (nice=10)")
+        os.nice(10)
     except:
         pass
+    
+    # Increase recursion limit just in case for deep recursive calls if any (unlikely here)
+    import sys
+    sys.setrecursionlimit(2000)
     
     run_download_queue()

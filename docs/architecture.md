@@ -32,7 +32,9 @@ graph TB
     
     A --> B --> C --> D --> E --> F --> G --> H & I & J
     H & I & J -->|Diverse Evaluations| K[Ranking & Refinement]
-    K -->|Refined params| A
+    K -->|ParameterRecommender| L[Trials Generation]
+    L -->|Backtest & MC| M[A/B Comparison]
+    M -->|Promotion| A
 
     
     subgraph JOURNAL["SQLite Journal"]
@@ -83,8 +85,9 @@ forex-backtester/
 ├── engine/            # Backtesting core
 ├── analysis/          # Metrics & validation
 ├── journal/           # Result tracking
-├── llm/               # CLIProxy integration
-└── config/            # Tuning parameters
+├── llm/               # CLIProxy & ParameterRecommender
+├── trials/            # AI-generated parameter sets
+└── config/            # Tuning grids & policies
 ```
 
 ## Validation Methodology
