@@ -10,6 +10,7 @@ The Forex Backtester is designed to handle massive-scale strategy sweeps across 
 
 - **Massive Parallelization**: Run up to 100 concurrent backtests using `joblib`.
 - **Tick-level Fidelity**: Accurate simulation with bid/ask spreads via HftBacktest.
+- **Realistic Transaction Costs**: Integrated spread, commission, and slippage modeling for all strategies.
 - **22+ Year History**: Support for historical tick data from Dukascopy (2003-present).
 - **Multi-Model AI Evaluation**: Deep strategy analysis from Claude Opus 4.5, Gemini 3 Pro, and GPT 5.2.
 - **Intelligent Journaling**: Persistent SQLite memory to help LLMs learn from previous iterations.
@@ -50,4 +51,4 @@ forex-backtester/
 
 ---
 
-*Phase 3 and 4 of the foundation are complete. Strategic refinement is ongoing.*
+*Phase 3 and 4 foundation are complete. Strategic refinement with transaction costs is ongoing.*

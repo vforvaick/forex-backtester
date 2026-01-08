@@ -15,6 +15,7 @@
 - [x] Walk-Forward Analysis framework (Implemented)
 - [x] Monte Carlo simulation (1,000 permutations, p-value, ruin probability)
 - [x] Result aggregation & ranking (Parquet sweep summary)
+- [x] **Realistic Transaction Costs** (Spread, Commission, Slippage modeling)
 
 ## Phase 4: LLM Integration (Week 7-8)
 - [x] CLIProxy integration (Multi-model support)
