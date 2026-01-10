@@ -101,19 +101,23 @@ def cmd_sweep(args):
     all_configs = []
     data_path = Path(f"data/parquet/{args.pair}")
     
-    # Auto-detect date range from available parquet files
+    # Auto-detect date range from available parquet files if not provided
     parquet_files = sorted(data_path.glob("*.parquet"))
-    if parquet_files:
+    
+    if args.start:
+        start_date = args.start
+    elif parquet_files:
         years = [int(f.stem) for f in parquet_files if f.stem.isdigit()]
-        if years:
-            start_year = min(years)
-            start_date = f"{start_year}-01-01"
-            end_date = f"{start_year}-01-31" # Default to 1st month
-        else:
-            start_date = "2024-01-10"
-            end_date = "2024-01-11"
+        start_date = f"{min(years)}-01-01" if years else "2024-01-10"
     else:
         start_date = "2024-01-10"
+        
+    if args.end:
+        end_date = args.end
+    elif parquet_files:
+        years = [int(f.stem) for f in parquet_files if f.stem.isdigit()]
+        end_date = f"{min(years)}-01-31" if years else "2024-01-11"
+    else:
         end_date = "2024-01-11"
 
     print(f"Sweep Range: {start_date} to {end_date} for {args.pair}")
@@ -598,6 +602,8 @@ def main():
     sw = subparsers.add_parser("sweep", help="Run parameter sweep")
     sw.add_argument("--pair", default="EURUSD", help="Currency pair")
     sw.add_argument("--strategy", default="all", help="Specific strategy or 'all'")
+    sw.add_argument("--start", help="Start date (YYYY-MM-DD)")
+    sw.add_argument("--end", help="End date (YYYY-MM-DD)")
     sw.add_argument("--n-jobs", type=int, default=4, help="Parallel jobs")
     sw.add_argument("--output", default="results/", help="Output directory")
     
