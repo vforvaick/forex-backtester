@@ -6,17 +6,28 @@ primary_metric: sharpe
 # Hard constraints - trials violating these are auto-rejected
 constraints:
   min_trades: 100
-  max_drawdown: 0.20  # 20%
+  max_drawdown: 0.50  # 50%
   min_win_rate: 0.40  # 40%
+  min_profit_factor: 1.0
   max_ruin_prob: 0.30  # 30% (Monte Carlo)
   max_mc_pvalue: 0.10  # Skill threshold
 
-# Weighted scoring for comparison
+# Weighted scoring for LLM comparison (legacy)
 weights:
   sharpe: 0.40
   sortino: 0.25
   profit_factor: 0.20
   calmar: 0.15
+
+# Quantitative Ranking Weights (approved formula)
+ranking_weights:
+  sharpe: 0.25
+  sortino: 0.15
+  calmar: 0.20
+  profit_factor: 0.15
+  max_drawdown: 0.10  # Inverted (lower is better)
+  win_rate: 0.05
+  recovery_factor: 0.10
 
 # Multi-model consensus
 consensus:

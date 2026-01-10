@@ -43,7 +43,8 @@ async def evaluate_strategy(
     metrics: Dict[str, Any],
     run_id: int,
     model: str = DEFAULT_MODEL,
-    cliproxy_url: str = CLIPROXY_URL
+    cliproxy_url: str = CLIPROXY_URL,
+    trade_context: Optional[Dict] = None
 ) -> Dict:
     """
     Evaluate backtest results using LLM via CLIProxy.
@@ -54,19 +55,25 @@ async def evaluate_strategy(
         run_id: Database run ID for reference
         model: LLM model to use
         cliproxy_url: CLIProxy endpoint URL
+        trade_context: Optional additional context (distribution, anomalies)
     
     Returns:
         Parsed evaluation response
     """
     # Build context with historical data
-    context = build_llm_context(strategy_name, metrics)
+    base_context = build_llm_context(strategy_name, metrics)
+    
+    # Enhance with trade distribution context if provided
+    if trade_context:
+        distribution_text = format_trade_context(trade_context)
+        base_context = f"{base_context}\n\n{distribution_text}"
     
     # Prepare request
     payload = {
         "model": model,
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": context}
+            {"role": "user", "content": base_context}
         ],
         "temperature": 0.3,  # Lower for more deterministic analysis
         "max_tokens": 2000
@@ -111,6 +118,55 @@ async def evaluate_strategy(
                 "verdict": "error",
                 "analysis": f"Failed to evaluate: {e}"
             }
+
+
+def format_trade_context(context: Dict) -> str:
+    """
+    Format trade distribution context for LLM.
+    
+    Args:
+        context: Dict with optional keys:
+            - hour_distribution: List of trade counts per hour (0-23)
+            - day_distribution: List of trade counts per day (Mon-Sun)
+            - outlier_trades: List of (pnl, timestamp) for biggest winners/losers
+            - strategy_description: Text description of strategy logic
+    
+    Returns:
+        Formatted string for LLM prompt
+    """
+    lines = ["TRADE CONTEXT:"]
+    
+    if "strategy_description" in context:
+        lines.append(f"\nStrategy Logic: {context['strategy_description']}")
+    
+    if "hour_distribution" in context:
+        hours = context["hour_distribution"]
+        peak_hour = hours.index(max(hours)) if hours else 0
+        lines.append(f"\nTrade Distribution by Hour: Peak at {peak_hour:02d}:00 UTC")
+        # Show top 3 active hours
+        sorted_hours = sorted(range(24), key=lambda h: hours[h] if h < len(hours) else 0, reverse=True)[:3]
+        lines.append(f"  Most Active: {', '.join(f'{h:02d}:00' for h in sorted_hours)}")
+    
+    if "day_distribution" in context:
+        days = context["day_distribution"]
+        day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        peak_day = day_names[days.index(max(days))] if days else "N/A"
+        lines.append(f"\nTrade Distribution by Day: Peak on {peak_day}")
+    
+    if "outlier_trades" in context:
+        outliers = context["outlier_trades"]
+        if outliers:
+            lines.append("\nOutlier Trades (Top 5 by PnL magnitude):")
+            for pnl, ts in outliers[:5]:
+                sign = "+" if pnl > 0 else ""
+                lines.append(f"  {sign}{pnl:.2f}% at {ts}")
+    
+    if "anomalies" in context:
+        lines.append("\nAnomalies Detected:")
+        for anomaly in context["anomalies"]:
+            lines.append(f"  ⚠ {anomaly}")
+    
+    return "\n".join(lines)
 
 
 def parse_llm_response(content: str) -> Dict:

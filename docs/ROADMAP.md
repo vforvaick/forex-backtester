@@ -15,19 +15,24 @@
 ## Phase 3: Validation Pipeline (Week 5-6)
 - [x] Walk-Forward Analysis framework (Implemented)
 - [x] Monte Carlo simulation (1,000 permutations, p-value, ruin probability)
-- [x] Result aggregation & ranking (Parquet sweep summary)
-- [x] **Realistic Transaction Costs** (Spread, Commission, Slippage modeling)
+| **Component** | **Tools/Files** | **Description** |
+|---|---|---|
+| **Metrics** | QuantStats + VectorBT | Performance analysis |
+| **Analysis** | **strategy_ranker.py** | **Composite scoring & ranking** |
+| **Visuals** | **visualizer.py** | **Interactive equity & trade charts** |
+| **Costs** | **transaction_costs.py** | **Spread, commission, slippage modeling** |
 
-## Phase 4: LLM Integration (Week 7-8)
+## Phase 4: Intelligent Refinement (Week 7-8)
 - [x] CLIProxy integration (Multi-model support)
 - [x] Journal-based context feeding (SQLite/JSON)
-- [x] Automated parameter recommendation loop (Completed)
+- [x] **Parameter Recommender Logic** (Consensus + Bounds validation)
+- [ ] **Automated Optimization Loop** (Orchestrated Sweep-Evaluate-Trial cycle)
 
-
-## Phase 5: Production & Portfolio Scaling (Week 9-10)
-- [ ] **Multi-Currency Portfolio Engine**: Correlation matrices, joint drawdown analysis, and dynamic capital allocation.
-- [ ] **Live-Trading Bridge (Dry-Run)**: Streaming data integration and real-time shadow execution.
-- [ ] **Visual Performance Dashboards**: Professional HTML/PDF reporting with professional charting.
+## Phase 5: Production & Analysis (Week 9-10)
+- [x] **Equity Curve & Risk Visualization** (analysis/visualizer.py)
+- [x] **Weighted Strategy Ranking Dashboard** (analysis/strategy_ranker.py)
+- [ ] **Multi-Currency Portfolio Engine**: Correlation matrices and capital allocation.
+- [ ] **Live-Trading Bridge (Dry-Run)**: Streaming data shadow execution.
 
 ## Future Enhancements
 - [ ] Advanced machine learning for regime prediction

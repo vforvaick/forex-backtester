@@ -2,6 +2,23 @@
 
 All notable changes to forex-backtester will be documented in this file.
 
+## [2026-01-11] - Visualization & Quantitative Ranking
+### Added
+- **Quantitative Strategy Ranker**: `analysis/strategy_ranker.py` with composite scoring (Sharpe 25%, Calmar 20%, Sortino 15%, PF 15%, DD 10%, RF 10%, WR 5%).
+- **Equity Curve Visualizer**: `analysis/visualizer.py` with Plotly charts for equity curves, drawdown, and metrics dashboards.
+- **LLM Context Enhancement**: `llm/cliproxy_evaluator.py` now accepts trade distribution (hour/day), outlier trades, and anomaly detection.
+- **Ranking Weights Config**: `config/optimization_policy.yaml` now has `ranking_weights` section for customizable scoring.
+
+### Files Modified
+- `analysis/strategy_ranker.py` [NEW]
+- `analysis/visualizer.py` [NEW]
+- `analysis/__init__.py`
+- `config/optimization_policy.yaml`
+- `llm/cliproxy_evaluator.py`
+
+### Reference
+- Session: eeef757d-c017-4958-bb7d-dc7eb72aeb2d
+
 ## [2026-01-11] - System Run & XAUUSD Baseline
 ### Added
 - **Synthetic Data Generator**: `scripts/generate_test_data.py` for local testing without Dukascopy dependencies.
