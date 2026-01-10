@@ -2,6 +2,20 @@
 
 All notable changes to forex-backtester will be documented in this file.
 
+## [2026-01-11] - Progress Bar & Early Stop
+### Added
+- **Progress Bar + ETA**: `engine/parallel_runner.py` now uses `tqdm` for real-time sweep progress with ETA.
+- **Early Stop Filter**: Rejects strategies mid-sweep if DD>50%, PF<0.5, or trades<10. Configurable in `optimization_policy.yaml`.
+- **Early Stopped Verdict**: Journal database now accepts `early_stopped` as a valid verdict.
+
+### Files Modified
+- `engine/parallel_runner.py`
+- `config/optimization_policy.yaml`
+- `journal/database.py`
+
+### Reference
+- Session: eeef757d-c017-4958-bb7d-dc7eb72aeb2d
+
 ## [2026-01-11] - Visualization & Quantitative Ranking
 ### Added
 - **Quantitative Strategy Ranker**: `analysis/strategy_ranker.py` with composite scoring (Sharpe 25%, Calmar 20%, Sortino 15%, PF 15%, DD 10%, RF 10%, WR 5%).

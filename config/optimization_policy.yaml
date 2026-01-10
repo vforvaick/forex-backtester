@@ -36,3 +36,11 @@ consensus:
     - gemini-claude-opus-4-5-thinking
     - gemini-3-pro-preview
     - gpt-5.2
+
+# Early stop filter - reject strategies that fail constraints immediately
+early_stop:
+  enabled: true
+  max_drawdown: 0.50   # Stop/reject if DD > 50%
+  min_profit_factor: 0.5  # Reject if PF < 0.5 (very bad)
+  min_trades: 10  # Reject if too few trades
+

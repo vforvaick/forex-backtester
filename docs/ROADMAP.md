@@ -31,8 +31,11 @@
 ## Phase 5: Production & Analysis (Week 9-10)
 - [x] **Equity Curve & Risk Visualization** (analysis/visualizer.py)
 - [x] **Weighted Strategy Ranking Dashboard** (analysis/strategy_ranker.py)
+- [ ] **PDF Report Exporter**: Consolidated sweep results with embedded charts.
+- [ ] **Regime Labeling**: Tag market periods (trending/ranging) for filtered analysis.
 - [ ] **Multi-Currency Portfolio Engine**: Correlation matrices and capital allocation.
 - [ ] **Live-Trading Bridge (Dry-Run)**: Streaming data shadow execution.
+
 
 ## Future Enhancements
 - [ ] Advanced machine learning for regime prediction

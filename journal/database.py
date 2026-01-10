@@ -43,7 +43,7 @@ def init_database():
             profit_factor REAL,
             calmar REAL,
             total_return REAL,
-            verdict TEXT CHECK(verdict IN ('promising', 'reject', 'needs_refinement')),
+            verdict TEXT CHECK(verdict IN ('promising', 'reject', 'needs_refinement', 'early_stopped')),
             notes TEXT
         )
     """)
