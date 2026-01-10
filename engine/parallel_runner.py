@@ -166,7 +166,8 @@ def run_parallel_backtests(
     configs: List[BacktestConfig],
     n_jobs: int = -1,
     verbose: int = 10,
-    show_progress: bool = True
+    show_progress: bool = True,
+    use_rich: bool = True
 ) -> List[BacktestResult]:
     """
     Run multiple backtests in parallel.
@@ -175,7 +176,8 @@ def run_parallel_backtests(
         configs: List of backtest configurations
         n_jobs: Number of parallel jobs (-1 = all cores)
         verbose: Verbosity level for progress (ignored if show_progress=True)
-        show_progress: Use tqdm progress bar with ETA
+        show_progress: Use progress display
+        use_rich: Use Rich Live dashboard (falls back to tqdm if unavailable)
     
     Returns:
         List of BacktestResult objects
@@ -183,16 +185,68 @@ def run_parallel_backtests(
     total = len(configs)
     print(f"Running {total} backtests with {n_jobs} parallel jobs...")
     
-    if show_progress:
+    results = []
+    
+    if show_progress and use_rich:
+        try:
+            from rich.live import Live
+            from rich.table import Table
+            from rich.console import Console
+            from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeElapsedColumn
+            import time as time_module
+            
+            console = Console()
+            
+            def make_progress_table(completed: int, total: int, current_batch: List[str], elapsed: float) -> Table:
+                table = Table(title="🚀 Sweep Progress", show_header=True)
+                table.add_column("Metric", style="cyan")
+                table.add_column("Value", style="green")
+                
+                pct = (completed / total * 100) if total > 0 else 0
+                bar = "█" * int(pct / 5) + "░" * (20 - int(pct / 5))
+                eta = (elapsed / completed * (total - completed)) if completed > 0 else 0
+                
+                table.add_row("Progress", f"[{bar}] {pct:.1f}%")
+                table.add_row("Completed", f"{completed}/{total}")
+                table.add_row("Elapsed", f"{elapsed:.1f}s")
+                table.add_row("ETA", f"{eta:.0f}s")
+                if current_batch:
+                    table.add_row("Running", ", ".join(s[:15] for s in current_batch[:3]))
+                return table
+            
+            start_time = time_module.time()
+            batch_size = max(1, n_jobs if n_jobs > 0 else 4)
+            
+            with Live(make_progress_table(0, total, [], 0), console=console, refresh_per_second=4) as live:
+                for i in range(0, total, batch_size):
+                    batch = configs[i:i + batch_size]
+                    batch_names = [c.strategy_name for c in batch]
+                    
+                    # Update display before running batch
+                    elapsed = time_module.time() - start_time
+                    live.update(make_progress_table(len(results), total, batch_names, elapsed))
+                    
+                    # Run batch
+                    batch_results = Parallel(n_jobs=n_jobs, verbose=0)(
+                        delayed(run_single_backtest)(config) for config in batch
+                    )
+                    results.extend(batch_results)
+                    
+                    # Update display after batch
+                    elapsed = time_module.time() - start_time
+                    live.update(make_progress_table(len(results), total, [], elapsed))
+            
+        except ImportError:
+            print("Rich not installed, falling back to tqdm...")
+            use_rich = False
+    
+    if show_progress and not use_rich:
         try:
             from tqdm import tqdm
             
-            # Use tqdm with joblib
-            results = []
             with tqdm(total=total, desc="Sweep Progress", unit="run", 
                       bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]') as pbar:
                 
-                # Run in batches for progress updates (joblib doesn't support callbacks well)
                 batch_size = max(1, n_jobs if n_jobs > 0 else 4)
                 
                 for i in range(0, total, batch_size):
@@ -203,7 +257,6 @@ def run_parallel_backtests(
                     results.extend(batch_results)
                     pbar.update(len(batch))
                     
-                    # Show current strategy in description
                     if batch_results:
                         last_name = batch_results[-1].config.strategy_name
                         pbar.set_postfix_str(f"Last: {last_name[:20]}")
@@ -213,7 +266,8 @@ def run_parallel_backtests(
             results = Parallel(n_jobs=n_jobs, verbose=verbose)(
                 delayed(run_single_backtest)(config) for config in configs
             )
-    else:
+    
+    if not show_progress:
         results = Parallel(n_jobs=n_jobs, verbose=verbose)(
             delayed(run_single_backtest)(config) for config in configs
         )

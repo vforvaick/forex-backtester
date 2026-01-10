@@ -2,6 +2,19 @@
 
 All notable changes to forex-backtester will be documented in this file.
 
+## [2026-01-11] - Rich Live Dashboard
+### Added
+- **Rich Live Dashboard**: Interactive terminal table with progress bars, ETA, and elapsed time for sweeps.
+- **Heartbeat System**: `engine/progress.py` for monitoring worker status.
+
+### Files Modified
+- `engine/progress.py` [NEW]
+- `engine/parallel_runner.py`
+- `main.py`
+
+### Reference
+- Session: eeef757d-c017-4958-bb7d-dc7eb72aeb2d
+
 ## [2026-01-11] - Progress Bar & Early Stop
 ### Added
 - **Progress Bar + ETA**: `engine/parallel_runner.py` now uses `tqdm` for real-time sweep progress with ETA.
