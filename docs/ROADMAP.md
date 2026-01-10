@@ -24,7 +24,12 @@
 - [x] Automated parameter recommendation loop (Completed)
 
 
+## Phase 5: Production & Portfolio Scaling (Week 9-10)
+- [ ] **Multi-Currency Portfolio Engine**: Correlation matrices, joint drawdown analysis, and dynamic capital allocation.
+- [ ] **Live-Trading Bridge (Dry-Run)**: Streaming data integration and real-time shadow execution.
+- [ ] **Visual Performance Dashboards**: Professional HTML/PDF reporting with professional charting.
+
 ## Future Enhancements
-- [ ] Live trading adapter
-- [ ] Multi-currency portfolio optimization
-- [ ] Real-time signal generation
+- [ ] Advanced machine learning for regime prediction
+- [ ] Real-time signal generation via Telegram/Discord
+- [ ] Multi-broker adapter support

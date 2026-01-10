@@ -7,6 +7,7 @@ All notable changes to forex-backtester will be documented in this file.
 - **Synthetic Data Generator**: `scripts/generate_test_data.py` for local testing without Dukascopy dependencies.
 - **Dynamic Date Detection**: `main.py` now automatically detects available parquet files and sets backtest range.
 - **XAUUSD Baseline**: Successfully ran `moving_average_crossover` on 9 years of XAUUSD data (2010-2018) on `fight-uno`.
+- **Phase 5 Roadmap**: Defined Production & Portfolio Scaling roadmap, including Multi-Currency Portfolio Engine and Live-Trading Bridge.
 
 ### Fixed
 - **Import Error**: Fixed missing `run_single_backtest` export in `engine/__init__.py`.
