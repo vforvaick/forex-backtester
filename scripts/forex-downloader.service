@@ -1,0 +1,20 @@
+[Unit]
+Description=Forex Backtester Data Download Queue
+After=network.target
+
+[Service]
+Type=simple
+User=vforvaick
+WorkingDirectory=/home/vforvaick/forex-backtester
+ExecStart=/usr/bin/nice -n 10 /usr/bin/python3 /home/vforvaick/forex-backtester/scripts/download_queue.py
+Restart=always
+RestartSec=60
+StandardOutput=append:/home/vforvaick/forex-backtester/logs/download_queue.log
+StandardError=append:/home/vforvaick/forex-backtester/logs/download_queue.log
+
+# Resource limits
+MemoryMax=4G
+CPUQuota=50%
+
+[Install]
+WantedBy=multi-user.target

@@ -54,13 +54,30 @@ def cmd_backtest(args):
 
     # Create config
     data_path = Path(f"data/parquet/{args.pair}")
+    
+    # Auto-detect date range from available parquet files
+    parquet_files = sorted(data_path.glob("*.parquet"))
+    if parquet_files:
+        # Extract years from filenames and build a reasonable test range
+        years = [int(f.stem) for f in parquet_files if f.stem.isdigit()]
+        if years:
+            start_year = min(years)
+            start_date = f"{start_year}-01-01"
+            end_date = f"{start_year}-01-31"  # Test on first month of first available year
+        else:
+            start_date = "2024-01-10"
+            end_date = "2024-01-11"
+    else:
+        start_date = "2024-01-10"
+        end_date = "2024-01-11"
+    
     config = BacktestConfig(
         strategy_name=args.strategy,
         strategy_module=strategy_module,
         params=params,
         data_path=data_path,
-        start_date="2024-01-10", # Sample range
-        end_date="2024-01-11"
+        start_date=start_date,
+        end_date=end_date
     )
     
     print(f"Running {args.strategy} backtest on {args.pair}...")

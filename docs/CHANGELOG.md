@@ -2,6 +2,26 @@
 
 All notable changes to forex-backtester will be documented in this file.
 
+## [2026-01-11] - System Run & XAUUSD Baseline
+### Added
+- **Synthetic Data Generator**: `scripts/generate_test_data.py` for local testing without Dukascopy dependencies.
+- **Dynamic Date Detection**: `main.py` now automatically detects available parquet files and sets backtest range.
+- **XAUUSD Baseline**: Successfully ran `moving_average_crossover` on 9 years of XAUUSD data (2010-2018) on `fight-uno`.
+
+### Fixed
+- **Import Error**: Fixed missing `run_single_backtest` export in `engine/__init__.py`.
+- **Data Schema Compatibility**: Updated synthetic data generator to include `bid_vol`, `ask_vol`, and `mid` columns to match strategy expectations.
+- **VPS Environment**: Managed Python venv and dependencies on `fight-uno` for high-memory backtesting.
+
+### Files Modified
+- `engine/__init__.py`
+- `main.py`
+- `scripts/generate_test_data.py` [NEW]
+
+### Reference
+- **Journal Run ID**: 391 (XAUUSD Jan 2010)
+- Session: eeef757d-c017-4958-bb7d-dc7eb72aeb2d
+
 ## [Unreleased]
 
 ### Added
