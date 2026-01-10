@@ -125,6 +125,8 @@ def cmd_sweep(args):
     for category, strategies in tuning.items():
         if category == "_bounds": continue
         for strategy_name, variants in strategies.items():
+            if strategy_name == "_bounds": continue
+            
             # Filter by strategy if requested
             if args.strategy != "all" and strategy_name != args.strategy:
                 continue
