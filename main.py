@@ -99,10 +99,32 @@ def cmd_sweep(args):
         tuning = yaml.safe_load(f)
     
     all_configs = []
-    data_path = Path(f"data/parquet/EURUSD") # Default to EURUSD for now
+    data_path = Path(f"data/parquet/{args.pair}")
+    
+    # Auto-detect date range from available parquet files
+    parquet_files = sorted(data_path.glob("*.parquet"))
+    if parquet_files:
+        years = [int(f.stem) for f in parquet_files if f.stem.isdigit()]
+        if years:
+            start_year = min(years)
+            start_date = f"{start_year}-01-01"
+            end_date = f"{start_year}-01-31" # Default to 1st month
+        else:
+            start_date = "2024-01-10"
+            end_date = "2024-01-11"
+    else:
+        start_date = "2024-01-10"
+        end_date = "2024-01-11"
+
+    print(f"Sweep Range: {start_date} to {end_date} for {args.pair}")
     
     for category, strategies in tuning.items():
+        if category == "_bounds": continue
         for strategy_name, variants in strategies.items():
+            # Filter by strategy if requested
+            if args.strategy != "all" and strategy_name != args.strategy:
+                continue
+                
             strategy_module = f"strategies.{category}.{strategy_name}"
             
             # Create configs for each variant
@@ -110,11 +132,11 @@ def cmd_sweep(args):
                 all_configs.append(create_sweep_configs(
                     strategy_name=strategy_name,
                     strategy_module=strategy_module,
-                    param_ranges={k: [v] for k, v in params.items()}, # Wrap in list for grid gen
+                    param_ranges={k: [v] for k, v in params.items()},
                     data_path=data_path,
-                    start_date="2024-01-10",
-                    end_date="2024-01-11"
-                )[0]) # Since we passed single values, we get 1 config per variant
+                    start_date=start_date,
+                    end_date=end_date
+                )[0])
 
     print(f"Running sweep with {len(all_configs)} configurations using {args.n_jobs} parallel jobs...")
     results = run_parallel_backtests(all_configs, n_jobs=args.n_jobs)
@@ -574,6 +596,8 @@ def main():
     
     # Sweep command
     sw = subparsers.add_parser("sweep", help="Run parameter sweep")
+    sw.add_argument("--pair", default="EURUSD", help="Currency pair")
+    sw.add_argument("--strategy", default="all", help="Specific strategy or 'all'")
     sw.add_argument("--n-jobs", type=int, default=4, help="Parallel jobs")
     sw.add_argument("--output", default="results/", help="Output directory")
     
